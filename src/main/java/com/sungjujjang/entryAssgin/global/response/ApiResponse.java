@@ -16,4 +16,8 @@ public record ApiResponse<T>(
     public static <T> ApiResponse<T> fail(T error) {
         return new ApiResponse<>(false, null, error);
     }
+
+    public static <T> ApiResponse okId(T id) {
+        return new ApiResponse<>(true, new IdResponse<T>(id), null);
+    }
 }
