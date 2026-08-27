@@ -1,4 +1,8 @@
 package com.sungjujjang.entryAssgin.domain.notice.dto;
 
-public class CategoryListResponse {
+import java.util.List;
+
+public record CategoryListResponse(
+        List<CategoryDto> categories
+) {
 }
