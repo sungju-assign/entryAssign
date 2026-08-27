@@ -46,6 +46,13 @@ public class SecurityConfig {
                                 "/api/auth/register",
                                 "/api/auth/login"
                         ).permitAll()
+                        .requestMatchers(
+                                "/api/notice/*",
+                                "/api/notice/category"
+                        ).permitAll()
+                        .requestMatchers(
+                                "/api/admin/**"
+                        ).hasAnyAuthority("ADMIN")
                         .anyRequest().authenticated()
                 )
 

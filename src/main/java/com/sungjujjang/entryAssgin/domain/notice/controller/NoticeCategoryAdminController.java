@@ -1,4 +1,4 @@
 package com.sungjujjang.entryAssgin.domain.notice.controller;
 
-public class NoticeController {
+public class NoticeCategoryAdminController {
 }
