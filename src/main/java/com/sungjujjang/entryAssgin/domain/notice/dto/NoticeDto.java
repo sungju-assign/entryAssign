@@ -4,6 +4,7 @@ import com.sungjujjang.entryAssgin.domain.auth.dto.MeResponse;
 import com.sungjujjang.entryAssgin.domain.notice.entity.Notice;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record NoticeDto(
         Long id,
@@ -14,10 +15,11 @@ public record NoticeDto(
         Long viewCount,
         boolean isFixed,
         Long categoryId,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        List<CommentResponse> comments
 ) {
 
-    public static NoticeDto from(Notice notice) {
+    public static NoticeDto from(Notice notice, List<CommentResponse> comments) {
         return new NoticeDto(
                 notice.getId(),
                 notice.getTitle(),
@@ -27,7 +29,8 @@ public record NoticeDto(
                 notice.getViewCount(),
                 notice.isFixed(),
                 notice.getCategoryId(),
-                notice.getCreatedAt()
+                notice.getCreatedAt(),
+                comments
         );
     }
 }

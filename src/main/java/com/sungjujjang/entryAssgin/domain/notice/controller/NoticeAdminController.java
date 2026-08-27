@@ -15,9 +15,9 @@ import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
 
 @RestController
-@RequestMapping("/api/notice")
+@RequestMapping("/api/admin/notice")
 @RequiredArgsConstructor
-public class NoticeController {
+public class NoticeAdminController {
     private final NoticeService noticeService;
 
     @PostMapping(
