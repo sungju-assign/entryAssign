@@ -1,9 +1,7 @@
 package com.sungjujjang.entryAssgin.domain.notice.controller;
 
-import com.sungjujjang.entryAssgin.domain.notice.dto.CategoryListResponse;
-import com.sungjujjang.entryAssgin.domain.notice.dto.FileUploadRequest;
-import com.sungjujjang.entryAssgin.domain.notice.dto.NoticeDto;
-import com.sungjujjang.entryAssgin.domain.notice.dto.UpdateLikeResponse;
+import com.sungjujjang.entryAssgin.domain.notice.dto.*;
+import com.sungjujjang.entryAssgin.domain.notice.enums.Sorts;
 import com.sungjujjang.entryAssgin.domain.notice.service.CategoryService;
 import com.sungjujjang.entryAssgin.domain.notice.service.NoticeService;
 import com.sungjujjang.entryAssgin.global.response.ApiResponse;
@@ -19,6 +17,21 @@ import org.springframework.web.bind.annotation.*;
 public class NoticeController {
     private final NoticeService noticeService;
     private final CategoryService categoryService;
+
+    @GetMapping("")
+    public ApiResponse<NoticeListResponse> getNoticeList(
+            @RequestParam(required = false) Sorts sorts,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(required = false) Long categoryId
+    ) {
+        NoticeListResponse noticeListResponse = noticeService.getNoticeList(
+                page,
+                sorts,
+                categoryId
+        );
+
+        return ApiResponse.ok(noticeListResponse);
+    }
 
     @GetMapping("/{noticeId}")
     public ApiResponse<NoticeDto> getNotice(

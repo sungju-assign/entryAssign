@@ -2,15 +2,12 @@ package com.sungjujjang.entryAssgin.domain.notice.service;
 
 import com.sungjujjang.entryAssgin.domain.auth.entity.Member;
 import com.sungjujjang.entryAssgin.domain.auth.repository.MemberRepository;
-import com.sungjujjang.entryAssgin.domain.notice.dto.FileDto;
-import com.sungjujjang.entryAssgin.domain.notice.dto.FileUploadResponse;
-import com.sungjujjang.entryAssgin.domain.notice.dto.NoticeCreateRequest;
-import com.sungjujjang.entryAssgin.domain.notice.dto.NoticeDto;
-import com.sungjujjang.entryAssgin.domain.notice.dto.CommentResponse;
+import com.sungjujjang.entryAssgin.domain.notice.dto.*;
 import com.sungjujjang.entryAssgin.domain.notice.entity.Category;
 import com.sungjujjang.entryAssgin.domain.notice.entity.File;
 import com.sungjujjang.entryAssgin.domain.notice.entity.Notice;
 import com.sungjujjang.entryAssgin.domain.notice.entity.NoticeLike;
+import com.sungjujjang.entryAssgin.domain.notice.enums.Sorts;
 import com.sungjujjang.entryAssgin.domain.notice.repository.CategoryRepository;
 import com.sungjujjang.entryAssgin.domain.notice.repository.FileRepository;
 import com.sungjujjang.entryAssgin.domain.notice.repository.NoticeLikeRepository;
@@ -20,13 +17,16 @@ import com.sungjujjang.entryAssgin.global.network.ClientIpUtil;
 import com.sungjujjang.entryAssgin.global.s3.FileService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -130,22 +130,22 @@ public class NoticeService {
     }
 
     @Transactional
-    public Long updateNotice(NoticeCreateRequest noticeCreateRequest, Long memberId, Long noticeId) {
+    public Long updateNotice(NoticeUpdateRequest noticeUpdateRequest, Long memberId, Long noticeId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> UserNotFoundException.EXCEPTION);
 
         Notice notice = noticeRepository.findById(noticeId)
                 .orElseThrow(() -> NoticeNotFoundException.EXCEPTION);
 
-        if (noticeCreateRequest.files() != null) {
+        if (noticeUpdateRequest.files() != null) {
             List<File> originalFiles = fileRepository.findFilesByNotice(notice);
             List<Long> originalFilesId = originalFiles.stream()
                     .map(File::getId).toList();
 
             List<Long> removeFileTarget = new ArrayList<>(originalFilesId);
-            removeFileTarget.removeAll(noticeCreateRequest.files());
+            removeFileTarget.removeAll(noticeUpdateRequest.files());
 
-            List<Long> appendFileTarget = new ArrayList<>(noticeCreateRequest.files());
+            List<Long> appendFileTarget = new ArrayList<>(noticeUpdateRequest.files());
             appendFileTarget.removeAll(originalFilesId);
 
             for (Long fileId : appendFileTarget) {
@@ -177,7 +177,7 @@ public class NoticeService {
             }
         }
 
-        Long categoryId = noticeCreateRequest.categoryId();
+        Long categoryId = noticeUpdateRequest.categoryId();
         Category category;
         if (categoryId != null) {
             category = categoryRepository.findById(categoryId)
@@ -189,14 +189,16 @@ public class NoticeService {
         boolean wasFixedBefore = notice.isFixed();
 
         notice.updateNotice(
-                noticeCreateRequest.title(),
-                noticeCreateRequest.content(),
+                noticeUpdateRequest.title(),
+                noticeUpdateRequest.content(),
                 category,
-                noticeCreateRequest.fixed(),
+                noticeUpdateRequest.fixed(),
                 member
         );
 
-        if (noticeCreateRequest.fixed() && !wasFixedBefore && noticeRepository.countByIsFixedTrue() >= 3) {
+        if (Boolean.TRUE.equals(noticeUpdateRequest.fixed())
+                && !wasFixedBefore
+                && noticeRepository.countByIsFixedTrue() >= 3) {
             throw FixedCountExceededException.EXCEPTION;
         }
 
@@ -274,5 +276,43 @@ public class NoticeService {
                     noticeViewTTL
             );
         }
+    }
+
+    public NoticeListResponse getNoticeList(int page, Sorts sorts, Long category) {
+        List<Notice> basedNotices = noticeRepository.findAllByIsFixed(true);
+        int fixedCount = basedNotices.size();
+
+        Pageable pageable;
+        if (sorts != null) {
+            Sort sort;
+            if (sorts == Sorts.added) {
+                sort = Sort.by(Sort.Order.asc(sorts.getSort()));
+            } else {
+                sort = Sort.by(Sort.Order.desc(sorts.getSort()));
+            }
+            pageable = PageRequest.of(page-1, 10-fixedCount, sort);
+        } else {
+            pageable = PageRequest.of(page-1, 10-fixedCount);
+        }
+
+        Page<Notice> noticePage;
+
+        if (category != null) {
+            noticePage = noticeRepository.findAllByCategoryId(category, pageable);
+        } else {
+            noticePage = noticeRepository.findAll(pageable);
+        }
+
+        List<Notice> notices = noticePage.getContent();
+        basedNotices.addAll(notices);
+
+        List<NoticeSimpleDto> noticeSimpleDtoList = basedNotices.stream().map(NoticeSimpleDto::from).toList();
+
+        return new NoticeListResponse(
+                noticeSimpleDtoList,
+                noticePage.getTotalElements(),
+                noticePage.getTotalPages(),
+                noticePage.getNumber()
+        );
     }
 }
